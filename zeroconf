@@ -1,0 +1,149 @@
+import re
+import gc
+import time
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.svm import SVC
+p = re.compile(r'\W+')
+attr = []
+targets = []
+
+# \\\\\\\\\\\ Rading from zeroconf
+def readprism(fl1, fl2, attrib, targets_list,_N):
+    fl_dest = open(fl1)
+    fl_prop = open(fl2)
+    k = 0
+    i = 0
+    flag = False
+    for lines in fl_dest:
+        k = k + 1
+        if(p.split(lines)[0] == "States"):
+            size = int(p.split(lines)[1])
+           
+        if(p.split(lines)[0] == "Policy"):
+            break
+            
+    templist = []
+    print(size)
+
+    for i in range(size):
+        lines = fl_dest.readline()
+        templist.append(int(p.split(lines)[0]))
+        
+        
+    frst_line = fl_prop.readline()
+    num_of_attributes = len(p.split(frst_line))-1
+    
+    cntr = 0
+    for i in range(size):
+        row = np.zeros(num_of_attributes)
+        line = fl_prop.readline()
+        q = p.split(line)
+        for j in range (num_of_attributes-1):
+            row[j] = int(q[j+1])
+            row[num_of_attributes - 1] = _N - row[17]
+        
+        attrib.append(row)
+        targets_list.append(templist[i])
+        cntr += 1
+    fl_dest.close()
+    fl_prop.close()
+    
+def writepred(fl1, fl2, dt, _N):
+    state_file = open(fl1)
+    state_list = []
+    frst_line = state_file.readline()
+    num_of_attributes = len(p.split(frst_line))-1
+
+    for line in state_file:
+        row = np.zeros(num_of_attributes)
+        q = p.split(line)
+        for j in range (num_of_attributes-1):
+            row[j] = int(q[j+1])
+            row[num_of_attributes - 1] = _N - row[17]
+
+        state_list.append(row)
+    
+    tmp_list = []
+    i = 0
+    file_writer = open(fl2,'w+')
+    for st in state_list:
+        i = i + 1
+        tmp_list.append(st)
+        if i % 500000 == 499999:
+            pred = dt.predict(tmp_list) 
+            for res in pred:
+                file_writer.writelines((str)(res) + '\n')
+            i = 0
+            del tmp_list
+            del pred
+            tmp_list = []
+            
+    pred = dt.predict(tmp_list) 
+    for res in pred:
+        file_writer.writelines((str)(res) + '\n')
+    i = 0
+    del tmp_list
+    del pred
+    tmp_list = []
+    file_writer.close()
+    del state_list
+    gc.collect()
+    
+t1 = time.time()
+
+readprism('D://experiments/optimal_policies/zeroconf/zer_2_prop1_op.log',
+          'D://experiments/states/zeroconf/zer_2.sta', attr, targets,2)
+
+readprism('D://experiments/optimal_policies/zeroconf/zer_3_prop1_op.log',
+          'D://experiments/states/zeroconf/zer_3.sta', attr, targets,3)
+
+readprism('D://experiments/optimal_policies/zeroconf/zer_4_prop1_op.log',
+          'D://experiments/states/zeroconf/zer_4.sta', attr, targets,4)
+    
+t2 = time.time()
+dlt = t2-t1
+print('Read samples finished, It took {} seconds.'.format(dlt)) 
+t1 = t2
+
+X_train = attr
+y_train = targets
+
+X_test = []
+y_test = []
+
+tree = DecisionTreeClassifier(random_state=0)
+tree.fit(X_train, y_train)
+t2 = time.time()
+dlt = t2 - t1
+print('Training model finished and took {} seconds.'.format(dlt))
+t1 = t2
+
+writepred('D://experiments/states/zeroconf/zer_6.sta','D://experiments/pred/optimal_policies/zeroconf/zer_6_porp1_op.log', tree, 6)
+t2 = time.time()
+dlt = t2 - t1
+print('Prediction finished for zer_6 and took {} seconds.'.format(dlt))
+t1 = t2
+
+writepred('D://experiments/states/zeroconf/zer_10.sta','D://experiments/pred/optimal_policies/zeroconf/zer_10_porp1_op.log', tree, 10)
+t2 = time.time()
+dlt = t2 - t1
+print('Prediction finished for zer_10 and took {} seconds.'.format(dlt))
+t1 = t2
+
+writepred('D://experiments/states/zeroconf/zer_14.sta','D://experiments/pred/optimal_policies/zeroconf/zer_14_porp1_op.log', tree, 14)
+t2 = time.time()
+dlt = t2 - t1
+print('Prediction finished for zer_14 and took {} seconds.'.format(dlt))
+t1 = t2
+
+#writepred('D://experiments/states/zeroconf/zer_18.sta','D://experiments/pred/optimal_policies/zeroconf/zer_18_porp1_op.log', tree, 18)
+t2 = time.time()
+dlt = t2 - t1
+print('Prediction finished for zer_18 and took {} seconds.'.format(dlt))
+t1 = t2
+
+del tree
+gc.collect()
