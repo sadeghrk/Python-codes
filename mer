@@ -1,0 +1,163 @@
+import re
+import gc
+import time
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.svm import SVC
+p = re.compile(r'\W+')
+attr = []
+targets = []
+
+# \\\\\\\\\\\ Rading from mer
+def readprism(fl1, fl2, attrib, targets_list,_N):
+    fl_dest = open(fl1)
+    fl_prop = open(fl2)
+    k = 0
+    i = 0
+    flag = False
+    for lines in fl_dest:
+        k = k + 1
+        if(p.split(lines)[0] == "States"):
+            size = int(p.split(lines)[1])
+           
+        #if(p.split(lines)[0] == "Useful"):  
+        if(p.split(lines)[0] == "Policy"):
+            break
+            
+    templist = []
+    print(size)
+
+    for i in range(size):
+        lines = fl_dest.readline()
+        templist.append(int(p.split(lines)[0]))
+        
+        
+    frst_line = fl_prop.readline()
+    num_of_attributes = len(p.split(frst_line))-1
+    kk = 0
+    
+    cntr = 0
+    for i in range(size):
+        row = np.zeros(num_of_attributes)
+        line = fl_prop.readline()
+        q = p.split(line)
+        for j in range (num_of_attributes-1):
+            if q[j+1] == 'true':
+                row[j] = 1
+            elif q[j+1] == 'false':
+                row[j] = 0
+            else:
+                    row[j] = int(q[j+1])
+            row[num_of_attributes - 1] = _N - row[2]
+        
+        attrib.append(row)
+        targets_list.append(templist[i])
+        cntr += 1
+    fl_dest.close()
+    fl_prop.close()
+    
+def writepred(fl1, fl2, dt, _N):
+    state_file = open(fl1)
+    state_list = []
+    frst_line = state_file.readline()
+    num_of_attributes = len(p.split(frst_line))-1
+    file_writer = open(fl2,'w+')
+
+    i = 0
+    for line in state_file:
+        row = np.zeros(num_of_attributes)
+        q = p.split(line)
+        for j in range (num_of_attributes-1):
+            if q[j+1] == 'true':
+                row[j] = 1
+            elif q[j+1] == 'false':
+                row[j] = 0
+            else:
+                    row[j] = int(q[j+1])
+            row[num_of_attributes - 1] = _N - row[2]
+
+        state_list.append(row)
+        i = i + 1
+        if i % 500000 == 499999:
+            pred = dt.predict(state_list) 
+            for res in pred:
+                file_writer.writelines((str)(res) + '\n')
+            del state_list
+            del pred
+            gc.collect()
+            state_list = []
+            print(i)
+        
+    pred = dt.predict(state_list) 
+    for res in pred:
+        file_writer.writelines((str)(res) + '\n')  
+
+    file_writer.close()
+    state_file.close()
+    del state_list
+    gc.collect()
+      
+    
+t1 = time.time()
+
+readprism('D://experiments/optimal_policies/mer/mer_20_op.log',
+          'D://experiments/states/mer/mer_20.sta', attr, targets,20)
+
+readprism('D://experiments/optimal_policies/mer/mer_35_op.log',
+          'D://experiments/states/mer/mer_35.sta', attr, targets,35)
+
+readprism('D://experiments/optimal_policies/mer/mer_50_op.log',
+          'D://experiments/states/mer/mer_50.sta', attr, targets,50)
+    
+t2 = time.time()
+dlt = t2-t1
+print('Read samples finished, It took {} seconds.'.format(dlt)) 
+t1 = t2
+
+X_train = attr
+y_train = targets
+
+X_test = []
+y_test = []
+
+tree = DecisionTreeClassifier(random_state=0)
+tree.fit(X_train, y_train)
+t2 = time.time()
+dlt = t2 - t1
+print('Training model finished and took {} seconds.'.format(dlt))
+t1 = t2
+
+writepred('D://experiments/states/mer/mer_100.sta','D://experiments/pred/optimal_policies/mer/mer_100_op.log', tree, 100)
+t2 = time.time()
+dlt = t2 - t1
+print('Prediction finished for mer_100 and took {} seconds.'.format(dlt))
+t1 = t2
+
+writepred('D://experiments/states/mer/mer_200.sta','D://experiments/pred/optimal_policies/mer/mer_200_op.log', tree, 200)
+t2 = time.time()
+dlt = t2 - t1
+print('Prediction finished for mer_200 and took {} seconds.'.format(dlt))
+t1 = t2
+
+writepred('D://experiments/states/mer/mer_2000.sta','D://experiments/pred/optimal_policies/mer/mer_2000_op.log', tree, 2000)
+t2 = time.time()
+dlt = t2 - t1
+print('Prediction finished for mer_2000 and took {} seconds.'.format(dlt))
+t1 = t2
+
+writepred('D://experiments/states/mer/mer_3500.sta','D://experiments/pred/optimal_policies/mer/mer_3500_op.log', tree, 3500)
+t2 = time.time()
+dlt = t2 - t1
+print('Prediction finished for mer_3500 and took {} seconds.'.format(dlt))
+t1 = t2
+
+writepred('D://experiments/states/mer/mer_5000.sta','D://experiments/pred/optimal_policies/mer/mer_5000_op.log', tree, 5000)
+t2 = time.time()
+dlt = t2 - t1
+print('Prediction finished for mer_5000 and took {} seconds.'.format(dlt))
+t1 = t2
+
+del tree
+gc.collect()
